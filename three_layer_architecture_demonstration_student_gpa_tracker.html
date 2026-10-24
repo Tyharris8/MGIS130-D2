@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3-Layer Architecture Demo - GPA Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            },
+            uilayer: {
+              light: '#ecfdf5',
+              border: '#10b981',
+              text: '#047857'
+            },
+            proclayer: {
+              light: '#eff6ff',
+              border: '#3b82f6',
+              text: '#1d4ed8'
+            },
+            datalayer: {
+              light: '#fef3c7',
+              border: '#f59e0b',
+              text: '#b45309'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar & animation highlights for architectural debugging */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+    .layer-highlight-ui {
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.6) !important;
+      transition: box-shadow 0.3s ease;
+    }
+    .layer-highlight-proc {
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.6) !important;
+      transition: box-shadow 0.3s ease;
+    }
+    .layer-highlight-data {
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.6) !important;
+      transition: box-shadow 0.3s ease;
+    }
+    @keyframes pulse-light {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .pulse-bus {
+      animation: pulse-light 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- ========================================== -->
+  <!-- HEADER & ARCHITECTURE TOOLBAR              -->
+  <!-- ========================================== -->
+  <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-brand-600 text-white rounded-xl shadow-md">
+            <i class="fa-solid font-mono text-xl fa-layer-group"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold leading-tight">3-Layer Architecture Demo</h1>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Information System Design: Student GPA & Academic Tracker</p>
+          </div>
+        </div>
+
+        <!-- Controls & Toggle View -->
+        <div class="flex items-center space-x-3">
+          <!-- Hypothetical Calculator Button -->
+          <button onclick="UIModule.openHypotheticalModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-indigo-500"></i>
+            <span class="hidden sm:inline">What-If Predictor</span>
+          </button>
+
+          <!-- Layer Inspector Toggle -->
+          <button id="toggle-inspector-btn" onclick="UIModule.toggleInspector()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center gap-2 transition">
+            <i class="fa-solid fa-microscope text-brand-500"></i>
+            <span class="hidden sm:inline">Architecture Log</span>
+          </button>
+
+          <!-- Theme Toggle -->
+          <button onclick="UIModule.toggleDarkMode()" class="p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="Toggle Light/Dark Theme">
+            <i id="theme-icon" class="fa-solid fa-moon"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================== -->
+  <!-- MAIN CONTENT LAYOUT                        -->
+  <!-- ========================================== -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT COLUMN: ARCHITECTURE VISUALIZER & UI CONTROLS (5 COLS) -->
+    <section class="lg:col-span-5 space-y-6">
+
+      <!-- 1. THREE LAYER ARCHITECTURE DIAGRAM / STATUS CARD -->
+      <div id="arch-diagram-card" class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden transition-all">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            <i class="fa-solid fa-network-wired text-brand-500"></i>
+            Architecture Layer Status
+          </h2>
+          <span id="data-flow-badge" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+            Idle
+          </span>
+        </div>
+
+        <!-- Layer Visualizers -->
+        <div class="space-y-2.5 font-mono text-xs">
+          <!-- UI Layer Box -->
+          <div id="visual-ui-layer" class="p-3 rounded-xl border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 transition-all">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-desktop"></i> 1. UI Layer (Presentation)
+              </span>
+              <span class="text-[10px] px-1.5 py-0.5 bg-emerald-200 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 rounded">Dynamic Views</span>
+            </div>
+            <p class="text-[11px] text-emerald-600/80 dark:text-emerald-300/70 mt-1 font-sans">Form handling, theme switcher, responsive layout & live grade updates.</p>
+          </div>
+
+          <!-- Data Connector Arrow Down -->
+          <div class="flex justify-center text-slate-400 dark:text-slate-500 my-0.5">
+            <i id="bus-ui-proc" class="fa-solid fa-arrow-down-up-lock text-xs"></i>
+          </div>
+
+          <!-- Processing Layer Box -->
+          <div id="visual-proc-layer" class="p-3 rounded-xl border border-blue-300 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 transition-all">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-gears"></i> 2. Processing Layer (Business)
+              </span>
+              <span class="text-[10px] px-1.5 py-0.5 bg-blue-200 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 rounded">GPA Calculation Rules</span>
+            </div>
+            <p class="text-[11px] text-blue-600/80 dark:text-blue-300/70 mt-1 font-sans">Grade point conversion, credit weighting, GPA calculation formula, predictor engine.</p>
+          </div>
+
+          <!-- Data Connector Arrow Down -->
+          <div class="flex justify-center text-slate-400 dark:text-slate-500 my-0.5">
+            <i id="bus-proc-data" class="fa-solid fa-arrow-down-up-lock text-xs"></i>
+          </div>
+
+          <!-- Data Layer Box -->
+          <div id="visual-data-layer" class="p-3 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 transition-all">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-database"></i> 3. Data Layer (Persistence)
+              </span>
+              <span class="text-[10px] px-1.5 py-0.5 bg-amber-200 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded">LocalStorage Repo</span>
+            </div>
+            <p class="text-[11px] text-amber-600/80 dark:text-amber-300/70 mt-1 font-sans">Manages schemas, course updates, JSON export/import & local storage state.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. COURSE & SEMESTER MANAGEMENT INPUT FORM (UI LAYER ENGINE) -->
+      <div id="ui-layer-card" class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        
+        <!-- Header & Semester Selector -->
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 text-xs">
+              <i class="fa-solid fa-input-numeric"></i>
+            </span>
+            <h2 class="text-base font-bold">Course Data Entry</h2>
+          </div>
+
+          <!-- Active Semester Selection -->
+          <div class="flex items-center space-x-2">
+            <select id="active-semester-select" onchange="UIModule.handleSemesterChange(this.value)" class="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+              <!-- JS populated options -->
+            </select>
+            <button onclick="UIModule.promptAddSemester()" class="p-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs" title="Add New Semester">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Add Course Form -->
+        <form id="add-course-form" onsubmit="UIModule.handleCourseSubmit(event)" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+            <!-- Course Code/Name -->
+            <div class="sm:col-span-5">
+              <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Course Name/Code</label>
+              <input type="text" id="input-course-name" placeholder="e.g. CS101 Intro to CS" required class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+            </div>
+
+            <!-- Credit Hours -->
+            <div class="sm:col-span-3">
+              <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Credits</label>
+              <input type="number" id="input-course-credits" min="0.5" max="12" step="0.5" placeholder="3" required class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+            </div>
+
+            <!-- Grade Choice -->
+            <div class="sm:col-span-4">
+              <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">Grade</label>
+              <select id="input-course-grade" required class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                <option value="A">A (4.00)</option>
+                <option value="A-">A- (3.70)</option>
+                <option value="B+">B+ (3.30)</option>
+                <option value="B">B (3.00)</option>
+                <option value="B-">B- (2.70)</option>
+                <option value="C+">C+ (2.30)</option>
+                <option value="C">C (2.00)</option>
+                <option value="C-">C- (1.70)</option>
+                <option value="D+">D+ (1.30)</option>
+                <option value="D">D (1.00)</option>
+                <option value="F">F (0.00)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <button type="button" onclick="UIModule.loadSampleDataset()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-medium">
+              <i class="fa-solid fa-flask text-xs mr-1"></i>Load Sample Data
+            </button>
+
+            <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+              <i class="fa-solid fa-plus-circle"></i> Add Course
+            </button>
+          </div>
+        </form>
+
+        <!-- Current Semester Course Table -->
+        <div class="pt-2">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Semester Courses</span>
+              <span id="course-count-badge" class="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-[10px]">0</span>
+            </h3>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] text-slate-400 italic hidden sm:inline"><i class="fa-solid fa-pen-to-square mr-1"></i>Click Edit to modify course details</span>
+              <button onclick="UIModule.clearCurrentSemesterCourses()" class="text-[11px] text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 font-medium">
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto max-h-60 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-xl">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-100 dark:bg-slate-700/60 sticky top-0 text-slate-600 dark:text-slate-300 font-semibold">
+                <tr>
+                  <th class="p-2.5">Course</th>
+                  <th class="p-2.5 text-center">Credits</th>
+                  <th class="p-2.5 text-center">Grade</th>
+                  <th class="p-2.5 text-center">Points</th>
+                  <th class="p-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="course-table-body" class="divide-y divide-slate-100 dark:divide-slate-700/50">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DATA PERSISTENCE & SYSTEM STORAGE LAYER CONTROLS -->
+      <div id="data-layer-card" class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 text-xs">
+              <i class="fa-solid fa-database"></i>
+            </span>
+            <h2 class="text-base font-bold">Data Layer Administration</h2>
+          </div>
+          <span class="text-[10px] font-mono bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
+            LocalStorage Sync
+          </span>
+        </div>
+
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Directly interact with the JSON repository, export data payloads, or perform hard resets.
+        </p>
+
+        <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+          <button onclick="UIModule.exportDataJSON()" class="p-2 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 font-medium">
+            <i class="fa-solid fa-download text-amber-600"></i> Export JSON
+          </button>
+          
+          <label class="p-2 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center gap-2 font-medium cursor-pointer">
+            <i class="fa-solid fa-upload text-amber-600"></i> Import JSON
+            <input type="file" id="import-json-file" accept=".json" class="hidden" onchange="UIModule.importDataJSON(event)">
+          </label>
+        </div>
+
+        <button onclick="UIModule.resetAllData()" class="w-full py-2 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-trash-arrow-up"></i> Purge Data Layer Memory
+        </button>
+      </div>
+
+    </section>
+
+
+    <!-- RIGHT COLUMN: PROCESSING ENGINE, STATS & ARCHITECTURE AUDIT LOG (7 COLS) -->
+    <section class="lg:col-span-7 space-y-6">
+
+      <!-- 1. PROCESSING ENGINE CALCULATIONS & STATS CARDS -->
+      <div id="processing-layer-card" class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-5">
+        
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs">
+              <i class="fa-solid fa-calculator"></i>
+            </span>
+            <h2 class="text-base font-bold">Academic Summary & Calculations</h2>
+          </div>
+          <span class="text-xs text-slate-400 font-mono">Processing Layer Active</span>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          
+          <!-- Current Semester GPA -->
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Term GPA</span>
+            <div id="stat-term-gpa" class="text-2xl font-black text-brand-600 dark:text-brand-400 my-1">
+              0.00
+            </div>
+            <span id="stat-term-credits" class="text-[11px] text-slate-500 dark:text-slate-400">0 Credits</span>
+          </div>
+
+          <!-- Cumulative GPA -->
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Cumulative GPA</span>
+            <div id="stat-cgpa" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 my-1">
+              0.00
+            </div>
+            <span id="stat-total-credits" class="text-[11px] text-slate-500 dark:text-slate-400">0 Total Credits</span>
+          </div>
+
+          <!-- Academic Standing -->
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Standing</span>
+            <div id="stat-standing" class="text-xs font-bold mt-2 px-2 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 truncate">
+              N/A
+            </div>
+            <span class="text-[10px] text-slate-400 block mt-1">Rule Evaluated</span>
+          </div>
+
+          <!-- Total Quality Points -->
+          <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Quality Points</span>
+            <div id="stat-quality-points" class="text-2xl font-black text-amber-600 dark:text-amber-400 my-1">
+              0.00
+            </div>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400">Total Earned</span>
+          </div>
+
+        </div>
+
+        <!-- VISUALIZATION & GPA FORECAST TABBED AREA -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          
+          <!-- Chart Box -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+            <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center justify-between">
+              <span>GPA Progression Across Terms</span>
+              <i class="fa-solid fa-chart-line text-brand-500"></i>
+            </h3>
+            <div class="h-40 relative w-full flex items-center justify-center">
+              <canvas id="gpaChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Target GPA Forecaster (Business Logic Tool) -->
+          <div class="p-4 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300">Target CGPA Simulator</h3>
+              <button onclick="UIModule.openHypotheticalModal()" class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded hover:bg-indigo-700 transition">
+                What-If Grades
+              </button>
+            </div>
+            
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">
+              Calculate required GPA for upcoming remaining credit hours.
+            </p>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Target CGPA</label>
+                <input type="number" id="forecast-target-gpa" min="1.0" max="4.0" step="0.05" value="3.50" onchange="UIModule.recalculateForecast()" onkeyup="UIModule.recalculateForecast()" class="w-full p-1.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs">
+              </div>
+              <div>
+                <label class="block text-[10px] font-semibold text-slate-500 mb-1">Upcoming Credits</label>
+                <input type="number" id="forecast-future-credits" min="1" max="120" step="1" value="15" onchange="UIModule.recalculateForecast()" onkeyup="UIModule.recalculateForecast()" class="w-full p-1.5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs">
+              </div>
+            </div>
+
+            <div id="forecast-result" class="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 text-xs text-indigo-900 dark:text-indigo-200 font-mono text-center">
+              Target: --
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- 2. ARCHITECTURE LOG & BUS MONITOR (INTERACTIVE LEARNING CONSOLE) -->
+      <div id="architecture-log-card" class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-2">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 text-xs">
+              <i class="fa-solid fa-terminal"></i>
+            </span>
+            <h2 class="text-base font-bold">Inter-Layer Event Bus & Data Flow Log</h2>
+          </div>
+          <button onclick="UIModule.clearArchitectureLog()" class="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            Clear Console
+          </button>
+        </div>
+
+        <div id="bus-log-container" class="h-48 overflow-y-auto font-mono text-[11px] bg-slate-900 text-slate-200 p-3 rounded-xl space-y-1.5 border border-slate-800">
+          <div class="text-slate-500">// System initialized. 3-Layer separation active:</div>
+          <div class="text-slate-500">// [UI Layer] -&gt; [Processing Logic Layer] -&gt; [Data Storage Layer]</div>
+        </div>
+
+        <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-sans pt-1">
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> UI Event
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span> Processing Rule
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> Persistence Access
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- HYPOTHETICAL GRADED PREDICTOR MODAL        -->
+  <!-- ========================================== -->
+  <div id="hypothetical-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300 text-sm">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Hypothetical Grade Predictor</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Test "What-If" grades without changing actual records</p>
+          </div>
+        </div>
+        <button onclick="UIModule.closeHypotheticalModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="space-y-4 text-xs">
+        <p class="text-slate-600 dark:text-slate-300">
+          Adjust hypothetical grades for current active courses below to simulate predicted semester GPA:
+        </p>
+
+        <!-- Dynamic Hypothetical Rows -->
+        <div id="hypothetical-rows-container" class="space-y-2 max-h-48 overflow-y-auto p-1">
+          <!-- JS populated -->
+        </div>
+
+        <!-- Predicted Result Card -->
+        <div class="p-4 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl border border-indigo-200 dark:border-indigo-900 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block">Predicted Term GPA</span>
+            <span id="hypothetical-predicted-gpa" class="text-2xl font-black text-indigo-700 dark:text-indigo-300">0.00</span>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Difference vs Actual</span>
+            <span id="hypothetical-diff-badge" class="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700">0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+        <button onclick="UIModule.closeHypotheticalModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-semibold text-xs rounded-xl transition">
+          Close Predictor
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- EDIT COURSE MODAL                          -->
+  <!-- ========================================== -->
+  <div id="edit-course-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-xl bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 text-sm">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </div>
+          <h3 class="font-bold text-base">Edit Course Details</h3>
+        </div>
+        <button onclick="UIModule.closeEditCourseModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="edit-course-form" onsubmit="UIModule.handleEditCourseSubmit(event)" class="space-y-4">
+        <input type="hidden" id="edit-course-id">
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Course Name/Code</label>
+          <input type="text" id="edit-course-name" required class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Credits</label>
+            <input type="number" id="edit-course-credits" min="0.5" max="12" step="0.5" required class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Grade</label>
+            <select id="edit-course-grade" required class="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="A">A (4.00)</option>
+              <option value="A-">A- (3.70)</option>
+              <option value="B+">B+ (3.30)</option>
+              <option value="B">B (3.00)</option>
+              <option value="B-">B- (2.70)</option>
+              <option value="C+">C+ (2.30)</option>
+              <option value="C">C (2.00)</option>
+              <option value="C-">C- (1.70)</option>
+              <option value="D+">D+ (1.30)</option>
+              <option value="D">D (1.00)</option>
+              <option value="F">F (0.00)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-3 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="UIModule.closeEditCourseModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 font-semibold text-xs rounded-xl transition">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs rounded-xl shadow transition">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL / NOTIFICATION TOAST OVERLAY         -->
+  <!-- ========================================== -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- JAVASCRIPT APPLICATION ARCHITECTURE -->
+  <script>
+    /**
+     * =========================================================================
+     * LAYER 3: DATA LAYER (PERSISTENCE & SCHEMAS)
+     * =========================================================================
+     */
+    const DataLayer = (function () {
+      const STORAGE_KEY = 'ACADEMIC_SYSTEM_DATA_V1';
+
+      const defaultState = {
+        semesters: [
+          {
+            id: 'sem-1',
+            name: 'Fall 2025',
+            courses: [
+              { id: 'c-1', name: 'CS101 Intro to Computer Science', credits: 4.0, grade: 'A' },
+              { id: 'c-2', name: 'MATH201 Multivariable Calculus', credits: 3.0, grade: 'B+' },
+              { id: 'c-3', name: 'PHYS101 General Physics I', credits: 4.0, grade: 'A-' }
+            ]
+          },
+          {
+            id: 'sem-2',
+            name: 'Spring 2026',
+            courses: [
+              { id: 'c-4', name: 'CS201 Data Structures & Algos', credits: 4.0, grade: 'A' },
+              { id: 'c-5', name: 'ENG102 Academic Writing', credits: 3.0, grade: 'B' }
+            ]
+          }
+        ],
+        activeSemesterId: 'sem-2',
+        settings: {
+          scaleMax: 4.0
+        }
+      };
+
+      function logStorageAction(action, details) {
+        if (window.SystemLogger) {
+          window.SystemLogger.addEntry('DATA', action, details);
+        }
+      }
+
+      return {
+        getSystemState: function () {
+          try {
+            const dataStr = localStorage.getItem(STORAGE_KEY);
+            if (!dataStr) {
+              logStorageAction('INIT_DEFAULT', 'No state found in storage. Seeding default dataset.');
+              this.saveSystemState(defaultState);
+              return JSON.parse(JSON.stringify(defaultState));
+            }
+            logStorageAction('FETCH_STATE', 'Loaded state successfully from LocalStorage.');
+            return JSON.parse(dataStr);
+          } catch (e) {
+            console.error('DataLayer Error: Failed reading local storage', e);
+            return defaultState;
+          }
+        },
+
+        saveSystemState: function (state) {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            logStorageAction('SAVE_STATE', `Persisted state. Semesters count: ${state.semesters.length}`);
+            return true;
+          } catch (e) {
+            console.error('DataLayer Error: Failed saving state', e);
+            return false;
+          }
+        },
+
+        addCourse: function (semesterId, courseData) {
+          const state = this.getSystemState();
+          const targetSem = state.semesters.find(s => s.id === semesterId);
+          if (targetSem) {
+            const newCourse = {
+              id: 'c-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+              name: courseData.name,
+              credits: parseFloat(courseData.credits),
+              grade: courseData.grade
+            };
+            targetSem.courses.push(newCourse);
+            this.saveSystemState(state);
+            logStorageAction('INSERT_COURSE', `Added "${newCourse.name}" (${newCourse.credits} cr, ${newCourse.grade}) to ${targetSem.name}`);
+            return newCourse;
+          }
+          return null;
+        },
+
+        updateCourse: function (semesterId, courseId, updatedFields) {
+          const state = this.getSystemState();
+          const targetSem = state.semesters.find(s => s.id === semesterId);
+          if (targetSem) {
+            const course = targetSem.courses.find(c => c.id === courseId);
+            if (course) {
+              if (updatedFields.name !== undefined) course.name = updatedFields.name;
+              if (updatedFields.credits !== undefined) course.credits = parseFloat(updatedFields.credits);
+              if (updatedFields.grade !== undefined) course.grade = updatedFields.grade;
+              
+              this.saveSystemState(state);
+              logStorageAction('UPDATE_COURSE', `Updated course ID ${courseId} in ${targetSem.name}`);
+              return true;
+            }
+          }
+          return false;
+        },
+
+        deleteCourse: function (semesterId, courseId) {
+          const state = this.getSystemState();
+          const targetSem = state.semesters.find(s => s.id === semesterId);
+          if (targetSem) {
+            const initialLen = targetSem.courses.length;
+            targetSem.courses = targetSem.courses.filter(c => c.id !== courseId);
+            if (targetSem.courses.length < initialLen) {
+              this.saveSystemState(state);
+              logStorageAction('DELETE_COURSE', `Removed course ID ${courseId} from ${targetSem.name}`);
+              return true;
+            }
+          }
+          return false;
+        },
+
+        clearSemesterCourses: function(semesterId) {
+          const state = this.getSystemState();
+          const targetSem = state.semesters.find(s => s.id === semesterId);
+          if (targetSem) {
+            targetSem.courses = [];
+            this.saveSystemState(state);
+            logStorageAction('CLEAR_SEMESTER', `Purged all course entries from ${targetSem.name}`);
+            return true;
+          }
+          return false;
+        },
+
+        addSemester: function (semesterName) {
+          const state = this.getSystemState();
+          const newSem = {
+            id: 'sem-' + Date.now().toString(36),
+            name: semesterName,
+            courses: []
+          };
+          state.semesters.push(newSem);
+          state.activeSemesterId = newSem.id;
+          this.saveSystemState(state);
+          logStorageAction('CREATE_SEMESTER', `Created semester "${semesterName}"`);
+          return newSem;
+        },
+
+        setActiveSemester: function (semesterId) {
+          const state = this.getSystemState();
+          if (state.semesters.some(s => s.id === semesterId)) {
+            state.activeSemesterId = semesterId;
+            this.saveSystemState(state);
+            logStorageAction('SET_ACTIVE_SEM', `Switched active context to semester ID: ${semesterId}`);
+            return true;
+          }
+          return false;
+        },
+
+        purgeAll: function () {
+          localStorage.removeItem(STORAGE_KEY);
+          logStorageAction('PURGE_ALL', 'Wiped storage keys completely.');
+          return this.getSystemState();
+        },
+
+        importJSON: function (jsonString) {
+          try {
+            const parsed = JSON.parse(jsonString);
+            if (parsed && Array.isArray(parsed.semesters)) {
+              this.saveSystemState(parsed);
+              logStorageAction('IMPORT_DATA', 'Successfully imported valid external JSON schema.');
+              return true;
+            }
+          } catch (e) {
+            console.error('Invalid JSON structure', e);
+          }
+          return false;
+        }
+      };
+    })();
+
+    /**
+     * =========================================================================
+     * LAYER 2: PROCESSING LAYER (BUSINESS LOGIC ENGINE)
+     * =========================================================================
+     */
+    const ProcessingLayer = (function () {
+      const GRADE_SCALE = {
+        'A': 4.00,
+        'A-': 3.70,
+        'B+': 3.30,
+        'B': 3.00,
+        'B-': 2.70,
+        'C+': 2.30,
+        'C': 2.00,
+        'C-': 1.70,
+        'D+': 1.30,
+        'D': 1.00,
+        'F': 0.00
+      };
+
+      function logProcAction(action, details) {
+        if (window.SystemLogger) {
+          window.SystemLogger.addEntry('PROCESSING', action, details);
+        }
+      }
+
+      return {
+        gradeToPoints: function (gradeLetter) {
+          const pts = GRADE_SCALE[gradeLetter ? gradeLetter.toUpperCase() : 'F'];
+          return pts !== undefined ? pts : 0.00;
+        },
+
+        calculateSemesterMetrics: function (courses) {
+          logProcAction('CALC_TERM', `Evaluating GPA for ${courses ? courses.length : 0} courses.`);
+          if (!courses || courses.length === 0) {
+            return { gpa: 0.00, totalCredits: 0, totalQualityPoints: 0 };
+          }
+
+          let totalCredits = 0;
+          let totalQualityPoints = 0;
+
+          courses.forEach(c => {
+            const creds = parseFloat(c.credits) || 0;
+            const pts = this.gradeToPoints(c.grade);
+            totalCredits += creds;
+            totalQualityPoints += (creds * pts);
+          });
+
+          const gpa = totalCredits > 0 ? (totalQualityPoints / totalCredits) : 0.00;
+
+          return {
+            gpa: parseFloat(gpa.toFixed(2)),
+            totalCredits: parseFloat(totalCredits.toFixed(1)),
+            totalQualityPoints: parseFloat(totalQualityPoints.toFixed(2))
+          };
+        },
+
+        calculateCumulativeMetrics: function (semesters) {
+          logProcAction('CALC_CUMULATIVE', `Aggregating cumulative metrics across ${semesters.length} semesters.`);
+          let cumulativeCredits = 0;
+          let cumulativeQualityPoints = 0;
+          const semesterBreakdown = [];
+
+          semesters.forEach(sem => {
+            const termMetrics = this.calculateSemesterMetrics(sem.courses);
+            cumulativeCredits += termMetrics.totalCredits;
+            cumulativeQualityPoints += termMetrics.totalQualityPoints;
+
+            semesterBreakdown.push({
+              semesterId: sem.id,
+              semesterName: sem.name,
+              gpa: termMetrics.gpa,
+              credits: termMetrics.totalCredits
+            });
+          });
+
+          const cgpa = cumulativeCredits > 0 ? (cumulativeQualityPoints / cumulativeCredits) : 0.00;
+
+          return {
+            cgpa: parseFloat(cgpa.toFixed(2)),
+            totalCredits: parseFloat(cumulativeCredits.toFixed(1)),
+            totalQualityPoints: parseFloat(cumulativeQualityPoints.toFixed(2)),
+            semesterBreakdown: semesterBreakdown,
+            academicStanding: this.determineAcademicStanding(cgpa, cumulativeCredits)
+          };
+        },
+
+        determineAcademicStanding: function (cgpa, totalCredits) {
+          if (totalCredits === 0) return { title: 'N/A', status: 'neutral' };
+          
+          if (cgpa >= 3.75) {
+            return { title: 'President\'s List', status: 'excellent' };
+          } else if (cgpa >= 3.50) {
+            return { title: 'Dean\'s List', status: 'good' };
+          } else if (cgpa >= 2.00) {
+            return { title: 'Good Standing', status: 'normal' };
+          } else if (cgpa >= 1.50) {
+            return { title: 'Academic Warning', status: 'warning' };
+          } else {
+            return { title: 'Academic Probation', status: 'critical' };
+          }
+        },
+
+        calculateTargetForecast: function (currentCGPA, currentCredits, targetCGPA, futureCredits) {
+          logProcAction('SIMULATE_FORECAST', `Target: ${targetCGPA} over future ${futureCredits} credits.`);
+          
+          const currentQualityPoints = currentCGPA * currentCredits;
+          const totalTargetCredits = currentCredits + futureCredits;
+          const totalTargetQualityPoints = targetCGPA * totalTargetCredits;
+          
+          const neededQualityPoints = totalTargetQualityPoints - currentQualityPoints;
+          const requiredFutureGPA = futureCredits > 0 ? (neededQualityPoints / futureCredits) : 0;
+
+          return {
+            requiredGPA: parseFloat(requiredFutureGPA.toFixed(2)),
+            isAchievable: requiredFutureGPA <= 4.00 && requiredFutureGPA >= 0,
+            impossibleMessage: requiredFutureGPA > 4.00 
+              ? 'Exceeds maximum achievable GPA (4.00)' 
+              : (requiredFutureGPA < 0 ? 'Target already secured' : null)
+          };
+        }
+      };
+    })();
+
+    /**
+     * =========================================================================
+     * SYSTEM LOGGER / BUS MONITOR
+     * =========================================================================
+     */
+    const SystemLogger = (function () {
+      let entries = [];
+
+      return {
+        addEntry: function (layer, action, details) {
+          const entry = {
+            id: Date.now(),
+            timestamp: new Date().toLocaleTimeString(),
+            layer: layer,
+            action: action,
+            details: details
+          };
+          entries.unshift(entry);
+          if (entries.length > 50) entries.pop();
+
+          this.renderConsole();
+          this.triggerLayerPulse(layer);
+        },
+
+        renderConsole: function () {
+          const container = document.getElementById('bus-log-container');
+          if (!container) return;
+
+          container.innerHTML = entries.map(e => {
+            let colorClass = 'text-emerald-400';
+            if (e.layer === 'PROCESSING') colorClass = 'text-blue-400';
+            if (e.layer === 'DATA') colorClass = 'text-amber-400';
+
+            return `
+              <div class="hover:bg-slate-800 p-1 rounded transition">
+                <span class="text-slate-500">[${e.timestamp}]</span>
+                <span class="font-bold ${colorClass}">[${e.layer}]</span>
+                <span class="text-slate-300 font-semibold">${e.action}:</span>
+                <span class="text-slate-400">${e.details}</span>
+              </div>
+            `;
+          }).join('');
+        },
+
+        triggerLayerPulse: function (layer) {
+          const badge = document.getElementById('data-flow-badge');
+          if (badge) {
+            badge.innerText = `Active: ${layer}`;
+            badge.className = `text-xs font-mono px-2 py-0.5 rounded ${
+              layer === 'UI' ? 'bg-emerald-100 text-emerald-800' :
+              layer === 'PROCESSING' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+            }`;
+          }
+
+          let elementId = '';
+          if (layer === 'UI') elementId = 'visual-ui-layer';
+          if (layer === 'PROCESSING') elementId = 'visual-proc-layer';
+          if (layer === 'DATA') elementId = 'visual-data-layer';
+
+          const targetEl = document.getElementById(elementId);
+          if (targetEl) {
+            const highlightClass = layer === 'UI' ? 'layer-highlight-ui' : (layer === 'PROCESSING' ? 'layer-highlight-proc' : 'layer-highlight-data');
+            targetEl.classList.add(highlightClass);
+            setTimeout(() => targetEl.classList.remove(highlightClass), 600);
+          }
+        },
+
+        clear: function () {
+          entries = [];
+          this.renderConsole();
+        }
+      };
+    })();
+    window.SystemLogger = SystemLogger;
+
+    /**
+     * =========================================================================
+     * LAYER 1: UI LAYER (PRESENTATION & INTERACTION)
+     * =========================================================================
+     */
+    const UIModule = (function () {
+      let gpaChartInstance = null;
+
+      function logUIAction(action, details) {
+        if (window.SystemLogger) {
+          window.SystemLogger.addEntry('UI', action, details);
+        }
+      }
+
+      return {
+        init: function () {
+          logUIAction('INITIALIZE', 'Bootstrapping UI Layer and rendering views.');
+          this.refreshAllViews();
+          this.initChart();
+        },
+
+        refreshAllViews: function () {
+          const state = DataLayer.getSystemState();
+          this.renderSemesterOptions(state.semesters, state.activeSemesterId);
+
+          const activeSem = state.semesters.find(s => s.id === state.activeSemesterId) || state.semesters[0];
+          this.renderCourseTable(activeSem ? activeSem.courses : []);
+
+          const termMetrics = ProcessingLayer.calculateSemesterMetrics(activeSem ? activeSem.courses : []);
+          const cumulativeMetrics = ProcessingLayer.calculateCumulativeMetrics(state.semesters);
+
+          this.renderMetricsDisplay(termMetrics, cumulativeMetrics);
+          this.updateChart(cumulativeMetrics.semesterBreakdown);
+          this.recalculateForecast();
+        },
+
+        renderSemesterOptions: function (semesters, activeId) {
+          const selectEl = document.getElementById('active-semester-select');
+          if (!selectEl) return;
+
+          selectEl.innerHTML = semesters.map(s => 
+            `<option value="${s.id}" ${s.id === activeId ? 'selected' : ''}>${s.name}</option>`
+          ).join('');
+        },
+
+        renderCourseTable: function (courses) {
+          const tbody = document.getElementById('course-table-body');
+          const countBadge = document.getElementById('course-count-badge');
+          if (!tbody) return;
+
+          countBadge.innerText = courses.length;
+
+          if (courses.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="5" class="p-6 text-center text-slate-400 dark:text-slate-500 italic">
+                  No courses added for this semester yet. Use the form above to add courses.
+                </td>
+              </tr>
+            `;
+            return;
+          }
+
+          tbody.innerHTML = courses.map(c => {
+            const points = ProcessingLayer.gradeToPoints(c.grade);
+            const totalPoints = (points * c.credits).toFixed(2);
+
+            return `
+              <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                <td class="p-2 font-medium text-slate-800 dark:text-slate-200">${this.escapeHTML(c.name)}</td>
+                <td class="p-2 text-center font-mono">${c.credits}</td>
+                <td class="p-2 text-center font-bold text-brand-600 dark:text-brand-400">${c.grade}</td>
+                <td class="p-2 text-center font-mono text-slate-500 dark:text-slate-400">${totalPoints}</td>
+                <td class="p-2 text-right space-x-1">
+                  <button onclick="UIModule.openEditCourseModal('${c.id}')" class="text-brand-600 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300 p-1" title="Edit Course">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </button>
+                  <button onclick="UIModule.handleDeleteCourse('${c.id}')" class="text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 p-1" title="Remove Course">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        },
+
+        renderMetricsDisplay: function (term, cumulative) {
+          document.getElementById('stat-term-gpa').innerText = term.gpa.toFixed(2);
+          document.getElementById('stat-term-credits').innerText = `${term.totalCredits} Credit Hrs`;
+
+          document.getElementById('stat-cgpa').innerText = cumulative.cgpa.toFixed(2);
+          document.getElementById('stat-total-credits').innerText = `${cumulative.totalCredits} Total Credits`;
+
+          document.getElementById('stat-quality-points').innerText = cumulative.totalQualityPoints.toFixed(2);
+
+          const standingEl = document.getElementById('stat-standing');
+          if (standingEl) {
+            standingEl.innerText = cumulative.academicStanding.title;
+            const status = cumulative.academicStanding.status;
+            let classList = "text-xs font-bold mt-2 px-2 py-1 rounded-full truncate ";
+            
+            if (status === 'excellent') classList += "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300";
+            else if (status === 'good') classList += "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300";
+            else if (status === 'normal') classList += "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200";
+            else if (status === 'warning') classList += "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300";
+            else if (status === 'critical') classList += "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300";
+            else classList += "bg-slate-100 text-slate-600";
+
+            standingEl.className = classList;
+          }
+        },
+
+        handleCourseSubmit: function (event) {
+          event.preventDefault();
+          logUIAction('SUBMIT_FORM', 'User submitted add-course form.');
+
+          const nameInput = document.getElementById('input-course-name');
+          const creditInput = document.getElementById('input-course-credits');
+          const gradeSelect = document.getElementById('input-course-grade');
+
+          const name = nameInput.value.trim();
+          const credits = parseFloat(creditInput.value);
+          const grade = gradeSelect.value;
+
+          if (!name || isNaN(credits) || credits <= 0) {
+            this.showToast('Please enter valid course details.', 'error');
+            return;
+          }
+
+          const state = DataLayer.getSystemState();
+          DataLayer.addCourse(state.activeSemesterId, {
+            name: name,
+            credits: credits,
+            grade: grade
+          });
+
+          nameInput.value = '';
+          creditInput.value = '';
+          nameInput.focus();
+
+          this.showToast('Course added successfully!', 'success');
+          this.refreshAllViews();
+        },
+
+        openEditCourseModal: function (courseId) {
+          logUIAction('OPEN_EDIT_MODAL', `Opened edit modal for course ID ${courseId}`);
+          const state = DataLayer.getSystemState();
+          const activeSem = state.semesters.find(s => s.id === state.activeSemesterId);
+          if (!activeSem) return;
+
+          const course = activeSem.courses.find(c => c.id === courseId);
+          if (!course) return;
+
+          document.getElementById('edit-course-id').value = course.id;
+          document.getElementById('edit-course-name').value = course.name;
+          document.getElementById('edit-course-credits').value = course.credits;
+          document.getElementById('edit-course-grade').value = course.grade;
+
+          document.getElementById('edit-course-modal').classList.remove('hidden');
+        },
+
+        closeEditCourseModal: function () {
+          document.getElementById('edit-course-modal').classList.add('hidden');
+        },
+
+        handleEditCourseSubmit: function (event) {
+          event.preventDefault();
+          logUIAction('SUBMIT_EDIT_FORM', 'User saved edited course details.');
+
+          const courseId = document.getElementById('edit-course-id').value;
+          const name = document.getElementById('edit-course-name').value.trim();
+          const credits = parseFloat(document.getElementById('edit-course-credits').value);
+          const grade = document.getElementById('edit-course-grade').value;
+
+          if (!name || isNaN(credits) || credits <= 0) {
+            this.showToast('Please enter valid course details.', 'error');
+            return;
+          }
+
+          const state = DataLayer.getSystemState();
+          if (DataLayer.updateCourse(state.activeSemesterId, courseId, { name, credits, grade })) {
+            this.closeEditCourseModal();
+            this.showToast('Course updated successfully!', 'success');
+            this.refreshAllViews();
+          }
+        },
+
+        handleDeleteCourse: function (courseId) {
+          logUIAction('DELETE_CLICK', `User clicked delete for course ID ${courseId}`);
+          const state = DataLayer.getSystemState();
+          
+          if (DataLayer.deleteCourse(state.activeSemesterId, courseId)) {
+            this.showToast('Course removed.', 'info');
+            this.refreshAllViews();
+          }
+        },
+
+        clearCurrentSemesterCourses: function () {
+          const state = DataLayer.getSystemState();
+          if (confirm('Are you sure you want to clear all courses in this term?')) {
+            logUIAction('CLEAR_TERM_CLICK', 'User requested clear semester.');
+            DataLayer.clearSemesterCourses(state.activeSemesterId);
+            this.showToast('Semester courses cleared.', 'info');
+            this.refreshAllViews();
+          }
+        },
+
+        handleSemesterChange: function (newSemesterId) {
+          logUIAction('SEMESTER_CHANGE', `User switched term to ID ${newSemesterId}`);
+          DataLayer.setActiveSemester(newSemesterId);
+          this.refreshAllViews();
+        },
+
+        promptAddSemester: function () {
+          const semName = prompt('Enter new semester title (e.g., Summer 2026):');
+          if (semName && semName.trim()) {
+            logUIAction('ADD_SEMESTER_PROMPT', `Creating term: ${semName}`);
+            DataLayer.addSemester(semName.trim());
+            this.showToast(`Created semester: ${semName}`, 'success');
+            this.refreshAllViews();
+          }
+        },
+
+        recalculateForecast: function () {
+          const state = DataLayer.getSystemState();
+          const cumulative = ProcessingLayer.calculateCumulativeMetrics(state.semesters);
+
+          const targetInput = document.getElementById('forecast-target-gpa');
+          const futureInput = document.getElementById('forecast-future-credits');
+          const resultBox = document.getElementById('forecast-result');
+
+          if (!targetInput || !futureInput || !resultBox) return;
+
+          const targetGPA = parseFloat(targetInput.value) || 0;
+          const futureCredits = parseFloat(futureInput.value) || 0;
+
+          const forecast = ProcessingLayer.calculateTargetForecast(
+            cumulative.cgpa,
+            cumulative.totalCredits,
+            targetGPA,
+            futureCredits
+          );
+
+          if (forecast.isAchievable) {
+            resultBox.className = 'p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-900 dark:text-emerald-200 font-mono text-center';
+            resultBox.innerHTML = `Required Average GPA: <strong class="text-emerald-700 dark:text-emerald-300 text-sm">${forecast.requiredGPA.toFixed(2)}</strong>`;
+          } else {
+            resultBox.className = 'p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-xs text-rose-900 dark:text-rose-200 font-mono text-center';
+            resultBox.innerHTML = forecast.impossibleMessage 
+              ? `Unavailable: ${forecast.impossibleMessage}` 
+              : `Required GPA: ${forecast.requiredGPA.toFixed(2)} (Out of Range)`;
+          }
+        },
+
+        /**
+         * WHAT-IF / HYPOTHETICAL GRADED PREDICTOR MODAL LOGIC
+         */
+        openHypotheticalModal: function () {
+          logUIAction('OPEN_HYPOTHETICAL_MODAL', 'Opened what-if grade predictor dialog.');
+          const state = DataLayer.getSystemState();
+          const activeSem = state.semesters.find(s => s.id === state.activeSemesterId);
+
+          const container = document.getElementById('hypothetical-rows-container');
+          if (!container || !activeSem) return;
+
+          if (activeSem.courses.length === 0) {
+            container.innerHTML = `<p class="text-slate-400 italic">No current courses available to test. Add courses to the semester first!</p>`;
+          } else {
+            container.innerHTML = activeSem.courses.map((c, idx) => `
+              <div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                <span class="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[180px]">${this.escapeHTML(c.name)} (${c.credits} cr)</span>
+                <select id="hypo-grade-select-${idx}" onchange="UIModule.recalculateHypotheticalGPA()" class="text-xs px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600">
+                  ${['A','A-','B+','B','B-','C+','C','C-','D+','D','F'].map(g => 
+                    `<option value="${g}" ${g === c.grade ? 'selected' : ''}>Hypothetical: ${g}</option>`
+                  ).join('')}
+                </select>
+              </div>
+            `).join('');
+          }
+
+          document.getElementById('hypothetical-modal').classList.remove('hidden');
+          this.recalculateHypotheticalGPA();
+        },
+
+        closeHypotheticalModal: function () {
+          document.getElementById('hypothetical-modal').classList.add('hidden');
+        },
+
+        recalculateHypotheticalGPA: function () {
+          const state = DataLayer.getSystemState();
+          const activeSem = state.semesters.find(s => s.id === state.activeSemesterId);
+          if (!activeSem) return;
+
+          // Build array of temporary courses with hypothetical grades
+          const hypotheticalCourses = activeSem.courses.map((c, idx) => {
+            const selectEl = document.getElementById(`hypo-grade-select-${idx}`);
+            return {
+              ...c,
+              grade: selectEl ? selectEl.value : c.grade
+            };
+          });
+
+          // Run through Processing Layer
+          const actualTermMetrics = ProcessingLayer.calculateSemesterMetrics(activeSem.courses);
+          const hypoTermMetrics = ProcessingLayer.calculateSemesterMetrics(hypotheticalCourses);
+
+          const predictedGpaEl = document.getElementById('hypothetical-predicted-gpa');
+          const diffBadgeEl = document.getElementById('hypothetical-diff-badge');
+
+          if (predictedGpaEl) predictedGpaEl.innerText = hypoTermMetrics.gpa.toFixed(2);
+          
+          if (diffBadgeEl) {
+            const diff = (hypoTermMetrics.gpa - actualTermMetrics.gpa).toFixed(2);
+            const sign = diff > 0 ? '+' : '';
+            diffBadgeEl.innerText = `${sign}${diff} vs current`;
+            diffBadgeEl.className = `text-xs font-bold px-2 py-0.5 rounded ${
+              diff > 0 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200' :
+              (diff < 0 ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200' : 'bg-slate-200 dark:bg-slate-700')
+            }`;
+          }
+        },
+
+        loadSampleDataset: function () {
+          logUIAction('LOAD_SAMPLE', 'User requested sample data load.');
+          const state = DataLayer.getSystemState();
+          
+          DataLayer.addCourse(state.activeSemesterId, { name: 'CS301 Operating Systems', credits: 4, grade: 'A' });
+          DataLayer.addCourse(state.activeSemesterId, { name: 'STAT200 Statistics & Probability', credits: 3, grade: 'A-' });
+          DataLayer.addCourse(state.activeSemesterId, { name: 'GEN101 Philosophy Ethics', credits: 3, grade: 'B+' });
+
+          this.showToast('Sample dataset loaded.', 'success');
+          this.refreshAllViews();
+        },
+
+        exportDataJSON: function () {
+          logUIAction('EXPORT_JSON', 'Exporting Data Layer to file.');
+          const state = DataLayer.getSystemState();
+          const jsonStr = JSON.stringify(state, null, 2);
+          
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Academic_3Layer_Data_${new Date().toISOString().slice(0,10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          this.showToast('Data exported as JSON.', 'info');
+        },
+
+        importDataJSON: function (event) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          logUIAction('IMPORT_JSON', `Importing payload file: ${file.name}`);
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const content = e.target.result;
+            if (DataLayer.importJSON(content)) {
+              this.showToast('Data Layer replaced successfully!', 'success');
+              this.refreshAllViews();
+            } else {
+              this.showToast('Failed to parse JSON file.', 'error');
+            }
+          };
+          reader.readAsText(file);
+        },
+
+        resetAllData: function () {
+          if (confirm('Reset all semester records to initial default values?')) {
+            logUIAction('PURGE_ALL_CLICK', 'User confirmed full database purge.');
+            DataLayer.purgeAll();
+            this.showToast('System data reset to defaults.', 'info');
+            this.refreshAllViews();
+          }
+        },
+
+        initChart: function () {
+          const ctx = document.getElementById('gpaChart');
+          if (!ctx) return;
+
+          gpaChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: [],
+              datasets: [{
+                label: 'Term GPA',
+                data: [],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#2563eb',
+                pointRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  min: 0,
+                  max: 4.0,
+                  ticks: { stepSize: 1.0 }
+                }
+              },
+              plugins: {
+                legend: { display: false }
+              }
+            }
+          });
+        },
+
+        updateChart: function (semesterBreakdown) {
+          if (!gpaChartInstance) return;
+
+          gpaChartInstance.data.labels = semesterBreakdown.map(s => s.semesterName);
+          gpaChartInstance.data.datasets[0].data = semesterBreakdown.map(s => s.gpa);
+          gpaChartInstance.update();
+        },
+
+        toggleDarkMode: function () {
+          const html = document.documentElement;
+          const isDark = html.classList.toggle('dark');
+          const icon = document.getElementById('theme-icon');
+          if (icon) {
+            icon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+          }
+          logUIAction('THEME_TOGGLE', `Theme switched to ${isDark ? 'dark' : 'light'} mode.`);
+        },
+
+        toggleInspector: function () {
+          const card = document.getElementById('architecture-log-card');
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth' });
+            card.classList.add('layer-highlight-proc');
+            setTimeout(() => card.classList.remove('layer-highlight-proc'), 1000);
+          }
+        },
+
+        clearArchitectureLog: function () {
+          SystemLogger.clear();
+        },
+
+        showToast: function (message, type = 'info') {
+          const container = document.getElementById('toast-container');
+          if (!container) return;
+
+          const toast = document.createElement('div');
+          let bgColor = 'bg-slate-800 text-white';
+          if (type === 'success') bgColor = 'bg-emerald-600 text-white';
+          if (type === 'error') bgColor = 'bg-rose-600 text-white';
+
+          toast.className = `${bgColor} px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto`;
+          toast.innerHTML = `
+            <i class="fa-solid ${type === 'success' ? 'fa-circle-check' : (type === 'error' ? 'fa-circle-exclamation' : 'fa-info-circle')}"></i>
+            <span>${this.escapeHTML(message)}</span>
+          `;
+
+          container.appendChild(toast);
+
+          setTimeout(() => {
+            toast.classList.remove('translate-y-2', 'opacity-0');
+          }, 10);
+
+          setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+          }, 2500);
+        },
+
+        escapeHTML: function (str) {
+          return str.replace(/[&<>'"]/g, 
+            tag => ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              "'": '&#39;',
+              '"': '&quot;'
+            }[tag] || tag)
+          );
+        }
+      };
+    })();
+
+    window.onload = function () {
+      UIModule.init();
+    };
+  </script>
+</body>
+</html>
